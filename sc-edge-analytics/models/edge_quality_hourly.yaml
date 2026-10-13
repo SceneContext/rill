@@ -1,0 +1,85 @@
+# Hourly request-quality rollup of the raw bidder events.
+# One partition per node-hour directory in S3; a partition is re-run when any file in it changes.
+# change_mode: manual protects history older than S3's 90-day retention from a full rebuild on edit.
+# First deploy needs a manual full refresh; after every edit, trigger an incremental refresh (see README).
+type: model
+connector: duckdb
+create_secrets_from_connectors: s3
+
+incremental: true
+change_mode: manual
+refresh:
+  cron: "10 * * * *"
+  time_zone: UTC
+
+partitions:
+  glob:
+    path: s3://sc-analytics-445214595912/events/dt=*/hour=*/node=ovh-sc-edge-*
+    start: s3://sc-analytics-445214595912/events/dt=2026-10-05
+
+sql: |
+  WITH raw AS (
+    SELECT * FROM read_json('{{ .partition.uri }}/*.log.gz',
+      format = 'newline_delimited',
+      compression = 'gzip',
+      hive_partitioning = false,
+      ignore_errors = true,
+      columns = {
+        endpoint: 'VARCHAR', partner: 'VARCHAR', signal: 'VARCHAR', source: 'VARCHAR',
+        title: 'VARCHAR', latency_us: 'BIGINT', segments: 'VARCHAR[]'
+      })
+  )
+  SELECT
+    strptime(regexp_extract('{{ .partition.path }}', 'dt=([^/]+)', 1) || ' ' || regexp_extract('{{ .partition.path }}', 'hour=([^/]+)', 1), '%Y-%m-%d %H') AS ts_hour,
+    regexp_extract('{{ .partition.path }}', 'dt=([^/]+)', 1)   AS dt,
+    regexp_extract('{{ .partition.path }}', 'hour=([^/]+)', 1) AS hour,
+    regexp_extract('{{ .partition.path }}', 'node=([^/]+)', 1) AS node,
+    coalesce(endpoint, 'unknown') AS endpoint,
+    coalesce(partner, 'unknown')  AS partner,
+    coalesce(signal, 'unknown')   AS signal,
+    coalesce(source, 'unknown')   AS source,
+    coalesce(title <> '', false)  AS has_title,
+    coalesce(len(segments) > 0, false) AS has_segments,
+    coalesce(len(list_filter(segments, lambda s: NOT (
+      starts_with(s, 'SC_CTX_TIMEOFDAY_') OR starts_with(s, 'SC_PLATFORM_') OR starts_with(s, 'SC_CHANNEL_') OR
+      starts_with(s, 'SC_PER_') OR starts_with(s, 'SC_CTX_MOOD_') OR starts_with(s, 'SC_EMO_') OR
+      starts_with(s, 'SC_CTX_TREND_')
+    ))) > 0, false) AS has_content_segments,
+    count(*)                                                        AS requests,
+    count(*) FILTER (WHERE source = 'cache')                        AS cache_hits,
+    count(*) FILTER (WHERE latency_us IS NULL)                      AS lat_unknown,
+    count(*) FILTER (WHERE latency_us < 16)                         AS lat_lt_16us,
+    count(*) FILTER (WHERE latency_us >= 16    AND latency_us < 32)    AS lat_16_32us,
+    count(*) FILTER (WHERE latency_us >= 32    AND latency_us < 64)    AS lat_32_64us,
+    count(*) FILTER (WHERE latency_us >= 64    AND latency_us < 128)   AS lat_64_128us,
+    count(*) FILTER (WHERE latency_us >= 128   AND latency_us < 256)   AS lat_128_256us,
+    count(*) FILTER (WHERE latency_us >= 256   AND latency_us < 512)   AS lat_256_512us,
+    count(*) FILTER (WHERE latency_us >= 512   AND latency_us < 1024)  AS lat_512_1024us,
+    count(*) FILTER (WHERE latency_us >= 1024  AND latency_us < 2048)  AS lat_1_2ms,
+    count(*) FILTER (WHERE latency_us >= 2048  AND latency_us < 4096)  AS lat_2_4ms,
+    count(*) FILTER (WHERE latency_us >= 4096  AND latency_us < 8192)  AS lat_4_8ms,
+    count(*) FILTER (WHERE latency_us >= 8192  AND latency_us < 16384) AS lat_8_16ms,
+    count(*) FILTER (WHERE latency_us >= 16384 AND latency_us < 32768) AS lat_16_32ms,
+    count(*) FILTER (WHERE latency_us >= 32768)                     AS lat_ge_32ms
+  FROM raw
+  GROUP BY ALL
+
+tests:
+  - name: flags_not_null
+    assert: has_title IS NOT NULL AND has_segments IS NOT NULL AND has_content_segments IS NOT NULL
+  - name: content_implies_segments
+    assert: NOT has_content_segments OR has_segments
+  - name: latency_buckets_sum_to_requests
+    assert: >-
+      lat_unknown + lat_lt_16us + lat_16_32us + lat_32_64us + lat_64_128us + lat_128_256us + lat_256_512us +
+      lat_512_1024us + lat_1_2ms + lat_2_4ms + lat_4_8ms + lat_8_16ms + lat_16_32ms + lat_ge_32ms = requests
+  - name: cache_hits_within_requests
+    assert: cache_hits <= requests
+  - name: sane_date_range
+    assert: ts_hour >= TIMESTAMP '2026-10-05' AND ts_hour < now()::TIMESTAMP + INTERVAL 1 DAY
+  - name: unique_grain
+    sql: |
+      SELECT ts_hour, node, endpoint, partner, signal, source, has_title, has_segments, has_content_segments
+      FROM edge_quality_hourly
+      GROUP BY ALL
+      HAVING count(*) > 1

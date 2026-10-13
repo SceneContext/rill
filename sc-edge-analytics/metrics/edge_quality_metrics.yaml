@@ -1,0 +1,95 @@
+# Metrics view YAML
+# Reference documentation: https://docs.rilldata.com/reference/project-files/metrics-views
+# All rates are ratios of sums so they stay correct at any grain and across hours.
+# Compare Pubmatic resolution by `signal` (content vs bundle_only), never as a blended figure.
+
+version: 1
+type: metrics_view
+
+display_name: Edge Request Quality
+model: edge_quality_hourly
+timeseries: ts_hour
+smallest_time_grain: hour
+
+dimensions:
+  - name: endpoint
+    display_name: Endpoint
+    column: endpoint
+  - name: partner
+    display_name: Partner
+    column: partner
+  - name: signal
+    display_name: Signal
+    column: signal
+    description: "content, bundle_only, none; unknown before 2026-10-06 22:50 UTC"
+  - name: source
+    display_name: Source
+    column: source
+    description: cache or resolved
+  - name: node
+    display_name: Node
+    column: node
+  - name: has_title
+    display_name: Has Title
+    expression: CASE WHEN has_title THEN 'yes' ELSE 'no' END
+
+measures:
+  - name: requests
+    display_name: Requests
+    expression: sum(requests)
+    format_preset: humanize
+  - name: resolution_rate
+    display_name: Resolution Rate
+    description: Requests with at least one segment / requests
+    expression: coalesce(sum(requests) FILTER (WHERE has_segments), 0) * 1.0 / nullif(sum(requests), 0)
+    format_preset: percentage
+  - name: content_resolution_rate
+    display_name: Content Resolution Rate
+    description: Requests with at least one content segment / requests
+    expression: coalesce(sum(requests) FILTER (WHERE has_content_segments), 0) * 1.0 / nullif(sum(requests), 0)
+    format_preset: percentage
+  - name: cache_hit_rate
+    display_name: Cache Hit Rate
+    description: Requests answered from cache / requests. Dips briefly after bidder restarts.
+    expression: sum(cache_hits) * 1.0 / nullif(sum(requests), 0)
+    format_preset: percentage
+  - name: latency_p50_us
+    display_name: Latency p50 (µs, upper bound)
+    description: Upper edge of the log2 latency bucket containing the median. 32768 means >= 32 ms.
+    expression: |
+      CASE
+        WHEN sum(requests) - sum(lat_unknown) = 0 THEN NULL
+        WHEN sum(lat_lt_16us) >= 0.5 * (sum(requests) - sum(lat_unknown)) THEN 16
+        WHEN sum(lat_lt_16us) + sum(lat_16_32us) >= 0.5 * (sum(requests) - sum(lat_unknown)) THEN 32
+        WHEN sum(lat_lt_16us) + sum(lat_16_32us) + sum(lat_32_64us) >= 0.5 * (sum(requests) - sum(lat_unknown)) THEN 64
+        WHEN sum(lat_lt_16us) + sum(lat_16_32us) + sum(lat_32_64us) + sum(lat_64_128us) >= 0.5 * (sum(requests) - sum(lat_unknown)) THEN 128
+        WHEN sum(lat_lt_16us) + sum(lat_16_32us) + sum(lat_32_64us) + sum(lat_64_128us) + sum(lat_128_256us) >= 0.5 * (sum(requests) - sum(lat_unknown)) THEN 256
+        WHEN sum(lat_lt_16us) + sum(lat_16_32us) + sum(lat_32_64us) + sum(lat_64_128us) + sum(lat_128_256us) + sum(lat_256_512us) >= 0.5 * (sum(requests) - sum(lat_unknown)) THEN 512
+        WHEN sum(lat_lt_16us) + sum(lat_16_32us) + sum(lat_32_64us) + sum(lat_64_128us) + sum(lat_128_256us) + sum(lat_256_512us) + sum(lat_512_1024us) >= 0.5 * (sum(requests) - sum(lat_unknown)) THEN 1024
+        WHEN sum(lat_lt_16us) + sum(lat_16_32us) + sum(lat_32_64us) + sum(lat_64_128us) + sum(lat_128_256us) + sum(lat_256_512us) + sum(lat_512_1024us) + sum(lat_1_2ms) >= 0.5 * (sum(requests) - sum(lat_unknown)) THEN 2048
+        WHEN sum(lat_lt_16us) + sum(lat_16_32us) + sum(lat_32_64us) + sum(lat_64_128us) + sum(lat_128_256us) + sum(lat_256_512us) + sum(lat_512_1024us) + sum(lat_1_2ms) + sum(lat_2_4ms) >= 0.5 * (sum(requests) - sum(lat_unknown)) THEN 4096
+        WHEN sum(lat_lt_16us) + sum(lat_16_32us) + sum(lat_32_64us) + sum(lat_64_128us) + sum(lat_128_256us) + sum(lat_256_512us) + sum(lat_512_1024us) + sum(lat_1_2ms) + sum(lat_2_4ms) + sum(lat_4_8ms) >= 0.5 * (sum(requests) - sum(lat_unknown)) THEN 8192
+        WHEN sum(lat_lt_16us) + sum(lat_16_32us) + sum(lat_32_64us) + sum(lat_64_128us) + sum(lat_128_256us) + sum(lat_256_512us) + sum(lat_512_1024us) + sum(lat_1_2ms) + sum(lat_2_4ms) + sum(lat_4_8ms) + sum(lat_8_16ms) >= 0.5 * (sum(requests) - sum(lat_unknown)) THEN 16384
+        ELSE 32768
+      END
+    format_d3: ",.0f"
+  - name: latency_p95_us
+    display_name: Latency p95 (µs, upper bound)
+    description: Upper edge of the log2 latency bucket containing the 95th percentile. 32768 means >= 32 ms.
+    expression: |
+      CASE
+        WHEN sum(requests) - sum(lat_unknown) = 0 THEN NULL
+        WHEN sum(lat_lt_16us) >= 0.95 * (sum(requests) - sum(lat_unknown)) THEN 16
+        WHEN sum(lat_lt_16us) + sum(lat_16_32us) >= 0.95 * (sum(requests) - sum(lat_unknown)) THEN 32
+        WHEN sum(lat_lt_16us) + sum(lat_16_32us) + sum(lat_32_64us) >= 0.95 * (sum(requests) - sum(lat_unknown)) THEN 64
+        WHEN sum(lat_lt_16us) + sum(lat_16_32us) + sum(lat_32_64us) + sum(lat_64_128us) >= 0.95 * (sum(requests) - sum(lat_unknown)) THEN 128
+        WHEN sum(lat_lt_16us) + sum(lat_16_32us) + sum(lat_32_64us) + sum(lat_64_128us) + sum(lat_128_256us) >= 0.95 * (sum(requests) - sum(lat_unknown)) THEN 256
+        WHEN sum(lat_lt_16us) + sum(lat_16_32us) + sum(lat_32_64us) + sum(lat_64_128us) + sum(lat_128_256us) + sum(lat_256_512us) >= 0.95 * (sum(requests) - sum(lat_unknown)) THEN 512
+        WHEN sum(lat_lt_16us) + sum(lat_16_32us) + sum(lat_32_64us) + sum(lat_64_128us) + sum(lat_128_256us) + sum(lat_256_512us) + sum(lat_512_1024us) >= 0.95 * (sum(requests) - sum(lat_unknown)) THEN 1024
+        WHEN sum(lat_lt_16us) + sum(lat_16_32us) + sum(lat_32_64us) + sum(lat_64_128us) + sum(lat_128_256us) + sum(lat_256_512us) + sum(lat_512_1024us) + sum(lat_1_2ms) >= 0.95 * (sum(requests) - sum(lat_unknown)) THEN 2048
+        WHEN sum(lat_lt_16us) + sum(lat_16_32us) + sum(lat_32_64us) + sum(lat_64_128us) + sum(lat_128_256us) + sum(lat_256_512us) + sum(lat_512_1024us) + sum(lat_1_2ms) + sum(lat_2_4ms) >= 0.95 * (sum(requests) - sum(lat_unknown)) THEN 4096
+        WHEN sum(lat_lt_16us) + sum(lat_16_32us) + sum(lat_32_64us) + sum(lat_64_128us) + sum(lat_128_256us) + sum(lat_256_512us) + sum(lat_512_1024us) + sum(lat_1_2ms) + sum(lat_2_4ms) + sum(lat_4_8ms) >= 0.95 * (sum(requests) - sum(lat_unknown)) THEN 8192
+        WHEN sum(lat_lt_16us) + sum(lat_16_32us) + sum(lat_32_64us) + sum(lat_64_128us) + sum(lat_128_256us) + sum(lat_256_512us) + sum(lat_512_1024us) + sum(lat_1_2ms) + sum(lat_2_4ms) + sum(lat_4_8ms) + sum(lat_8_16ms) >= 0.95 * (sum(requests) - sum(lat_unknown)) THEN 16384
+        ELSE 32768
+      END
+    format_d3: ",.0f"

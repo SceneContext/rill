@@ -1,0 +1,9 @@
+compiler: rillv1
+
+display_name: SceneContext Edge Analytics
+description: Hourly rollups of live bidder events (requests, resolution, cache, latency, segments)
+
+olap_connector: duckdb
+
+ignore_paths:
+  - /scripts

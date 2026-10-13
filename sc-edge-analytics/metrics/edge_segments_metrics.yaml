@@ -1,0 +1,34 @@
+# Metrics view YAML
+# Reference documentation: https://docs.rilldata.com/reference/project-files/metrics-views
+
+version: 1
+type: metrics_view
+
+display_name: Edge Segments
+model: edge_segments_hourly
+timeseries: ts_hour
+smallest_time_grain: hour
+
+dimensions:
+  - name: segment
+    display_name: Segment
+    column: segment
+  - name: segment_family
+    display_name: Segment Family
+    column: segment_family
+  - name: endpoint
+    display_name: Endpoint
+    column: endpoint
+  - name: signal
+    display_name: Signal
+    column: signal
+  - name: node
+    display_name: Node
+    column: node
+
+measures:
+  - name: requests
+    display_name: Requests With Segment
+    description: Requests that returned the segment (counted once per request)
+    expression: sum(requests)
+    format_preset: humanize

@@ -1,0 +1,65 @@
+# Hourly count of requests that returned each segment (a segment is counted at most once per request).
+# Same partitioning and change_mode as edge_quality_hourly.
+type: model
+connector: duckdb
+create_secrets_from_connectors: s3
+
+incremental: true
+change_mode: manual
+refresh:
+  cron: "10 * * * *"
+  time_zone: UTC
+
+partitions:
+  glob:
+    path: s3://sc-analytics-445214595912/events/dt=*/hour=*/node=ovh-sc-edge-*
+    start: s3://sc-analytics-445214595912/events/dt=2026-10-05
+
+sql: |
+  WITH raw AS (
+    SELECT * FROM read_json('{{ .partition.uri }}/*.log.gz',
+      format = 'newline_delimited',
+      compression = 'gzip',
+      hive_partitioning = false,
+      ignore_errors = true,
+      columns = {endpoint: 'VARCHAR', signal: 'VARCHAR', segments: 'VARCHAR[]'})
+  ),
+  exploded AS (
+    SELECT
+      coalesce(endpoint, 'unknown') AS endpoint,
+      coalesce(signal, 'unknown')   AS signal,
+      unnest(list_distinct(segments)) AS segment
+    FROM raw
+    WHERE len(segments) > 0
+  )
+  SELECT
+    strptime(regexp_extract('{{ .partition.path }}', 'dt=([^/]+)', 1) || ' ' || regexp_extract('{{ .partition.path }}', 'hour=([^/]+)', 1), '%Y-%m-%d %H') AS ts_hour,
+    regexp_extract('{{ .partition.path }}', 'dt=([^/]+)', 1)   AS dt,
+    regexp_extract('{{ .partition.path }}', 'hour=([^/]+)', 1) AS hour,
+    regexp_extract('{{ .partition.path }}', 'node=([^/]+)', 1) AS node,
+    endpoint,
+    signal,
+    segment,
+    CASE
+      WHEN starts_with(segment, 'SC_CTX_TIMEOFDAY_') THEN 'time_of_day'
+      WHEN starts_with(segment, 'SC_PLATFORM_') OR starts_with(segment, 'SC_CHANNEL_') THEN 'platform_channel'
+      WHEN starts_with(segment, 'SC_PER_') OR starts_with(segment, 'SC_CTX_MOOD_') OR starts_with(segment, 'SC_EMO_')
+        OR starts_with(segment, 'SC_CTX_TREND_') THEN 'audience_mood_trend'
+      ELSE 'content'
+    END AS segment_family,
+    count(*) AS requests
+  FROM exploded
+  WHERE segment IS NOT NULL AND segment <> ''
+  GROUP BY ALL
+
+tests:
+  - name: segment_not_empty
+    assert: segment IS NOT NULL AND segment <> ''
+  - name: positive_requests
+    assert: requests > 0
+  - name: unique_grain
+    sql: |
+      SELECT ts_hour, node, endpoint, signal, segment
+      FROM edge_segments_hourly
+      GROUP BY ALL
+      HAVING count(*) > 1

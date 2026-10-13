@@ -1,0 +1,28 @@
+# Explore YAML
+# Reference documentation: https://docs.rilldata.com/reference/project-files/explores
+
+type: explore
+
+display_name: Edge Request Quality
+metrics_view: edge_quality_metrics
+
+dimensions: '*'
+measures: '*'
+
+time_zones:
+  - UTC
+
+defaults:
+  measures:
+    - requests
+    - resolution_rate
+    - content_resolution_rate
+    - cache_hit_rate
+    - latency_p50_us
+    - latency_p95_us
+  dimensions:
+    - endpoint
+    - signal
+    - source
+    - node
+  time_range: P7D

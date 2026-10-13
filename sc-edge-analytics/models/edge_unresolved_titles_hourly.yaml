@@ -1,0 +1,57 @@
+# Top 500 titles per endpoint per node-hour among requests that had a title but got no segments.
+# Approximate when summed over many hours: titles that never reach the top 500 in a node-hour are not kept.
+# Same partitioning and change_mode as edge_quality_hourly.
+type: model
+connector: duckdb
+create_secrets_from_connectors: s3
+
+incremental: true
+change_mode: manual
+refresh:
+  cron: "10 * * * *"
+  time_zone: UTC
+
+partitions:
+  glob:
+    path: s3://sc-analytics-445214595912/events/dt=*/hour=*/node=ovh-sc-edge-*
+    start: s3://sc-analytics-445214595912/events/dt=2026-10-05
+
+sql: |
+  WITH raw AS (
+    SELECT * FROM read_json('{{ .partition.uri }}/*.log.gz',
+      format = 'newline_delimited',
+      compression = 'gzip',
+      hive_partitioning = false,
+      ignore_errors = true,
+      columns = {endpoint: 'VARCHAR', title: 'VARCHAR', segments: 'VARCHAR[]'})
+  ),
+  ranked AS (
+    SELECT
+      coalesce(endpoint, 'unknown') AS endpoint,
+      title,
+      count(*) AS requests,
+      row_number() OVER (PARTITION BY coalesce(endpoint, 'unknown') ORDER BY count(*) DESC, title) AS rn
+    FROM raw
+    WHERE title <> '' AND coalesce(len(segments), 0) = 0
+    GROUP BY 1, 2
+  )
+  SELECT
+    strptime(regexp_extract('{{ .partition.path }}', 'dt=([^/]+)', 1) || ' ' || regexp_extract('{{ .partition.path }}', 'hour=([^/]+)', 1), '%Y-%m-%d %H') AS ts_hour,
+    regexp_extract('{{ .partition.path }}', 'dt=([^/]+)', 1)   AS dt,
+    regexp_extract('{{ .partition.path }}', 'hour=([^/]+)', 1) AS hour,
+    regexp_extract('{{ .partition.path }}', 'node=([^/]+)', 1) AS node,
+    endpoint,
+    title,
+    requests
+  FROM ranked
+  WHERE rn <= 500
+
+tests:
+  - name: title_not_empty
+    assert: title IS NOT NULL AND title <> ''
+  - name: at_most_500_per_endpoint_node_hour
+    sql: |
+      SELECT ts_hour, node, endpoint
+      FROM edge_unresolved_titles_hourly
+      GROUP BY ALL
+      HAVING count(*) > 500

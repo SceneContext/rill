@@ -1,0 +1,28 @@
+# Metrics view YAML
+# Reference documentation: https://docs.rilldata.com/reference/project-files/metrics-views
+
+version: 1
+type: metrics_view
+
+display_name: Edge Unresolved Titles
+model: edge_unresolved_titles_hourly
+timeseries: ts_hour
+smallest_time_grain: hour
+
+dimensions:
+  - name: title
+    display_name: Title
+    column: title
+  - name: endpoint
+    display_name: Endpoint
+    column: endpoint
+  - name: node
+    display_name: Node
+    column: node
+
+measures:
+  - name: requests
+    display_name: Unresolved Requests (approx.)
+    description: Requests with a title and no segments. Only the top 500 titles per endpoint per node-hour are kept, so totals are a lower bound.
+    expression: sum(requests)
+    format_preset: humanize

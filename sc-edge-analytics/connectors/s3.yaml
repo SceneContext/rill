@@ -1,0 +1,9 @@
+# Read-only access to the raw bidder events bucket.
+# No keys: credentials come from the host (EC2 instance role) via the default AWS credential chain.
+type: connector
+driver: s3
+
+region: eu-central-1
+allow_host_access: true
+path_prefixes:
+  - s3://sc-analytics-445214595912/events/
