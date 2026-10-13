@@ -3,11 +3,75 @@
 type: model
 materialize: true
 
+incremental: true
+partitions:
+  glob:
+    connector: s3_dsp
+    path: s3://scenecontext-dsp-log-bucket/agency_id=*/advertiser_id=*/campaign_id=*/processed/date=*/*.parquet
+    partition: directory
+
 create_secrets_from_connectors: s3_dsp
-sql: >
-  SELECT *
-  FROM read_parquet(
-    's3://scenecontext-dsp-log-bucket/agency_id=*/advertiser_id=*/campaign_id=*/processed/**/*.parquet',
-    hive_partitioning = true,
-    union_by_name = true
+sql: |
+  WITH schema AS (
+    SELECT
+      NULL::TIMESTAMP AS event_timestamp, NULL::DATE AS event_date, NULL::TIMESTAMP AS event_time_utc,
+      NULL::BIGINT AS event_hour, NULL::BIGINT AS campaign_id, NULL::VARCHAR AS customer_id,
+      NULL::VARCHAR AS adgroup_id, NULL::VARCHAR AS creative_id, NULL::BIGINT AS impressions,
+      NULL::BIGINT AS clicks, NULL::BIGINT AS conversions, NULL::DOUBLE AS revenue, NULL::DOUBLE AS cost,
+      NULL::VARCHAR AS content_id, NULL::VARCHAR AS content_title, NULL::VARCHAR AS content_series,
+      NULL::VARCHAR AS content_season, NULL::VARCHAR AS content_episode, NULL::VARCHAR AS content_genre,
+      NULL::VARCHAR AS content_genre_1, NULL::VARCHAR AS content_genre_2, NULL::VARCHAR AS content_genre_3,
+      NULL::VARCHAR AS content_genre_4, NULL::VARCHAR AS content_genre_5, NULL::VARCHAR AS content_rating,
+      NULL::VARCHAR AS content_language, NULL::VARCHAR AS content_network, NULL::VARCHAR AS content_keywords,
+      NULL::VARCHAR AS is_live_stream, NULL::VARCHAR AS streaming_network, NULL::VARCHAR AS streaming_channel,
+      NULL::VARCHAR AS audio_feed_id, NULL::VARCHAR AS site_id, NULL::VARCHAR AS url, NULL::VARCHAR AS domain,
+      NULL::VARCHAR AS app_bundle, NULL::VARCHAR AS app_name, NULL::VARCHAR AS app_domain,
+      NULL::VARCHAR AS app_publisher_id, NULL::VARCHAR AS device_type, NULL::VARCHAR AS device_make,
+      NULL::VARCHAR AS device_connection_type, NULL::VARCHAR AS os, NULL::VARCHAR AS browser,
+      NULL::VARCHAR AS country, NULL::VARCHAR AS region, NULL::VARCHAR AS city, NULL::VARCHAR AS language,
+      NULL::VARCHAR AS exchange, NULL::VARCHAR AS publisher_id, NULL::VARCHAR AS impression_id,
+      NULL::VARCHAR AS campaign_name, NULL::VARCHAR AS partner_id, NULL::VARCHAR AS source,
+      NULL::TIMESTAMP AS ingestion_time, NULL::VARCHAR AS file_name, NULL::VARCHAR[] AS targeted_segments,
+      NULL::VARCHAR AS raw_event_status, NULL::VARCHAR AS raw_event_country, NULL::VARCHAR AS raw_event_ip_address,
+      NULL::VARCHAR AS raw_event_referrer, NULL::VARCHAR AS raw_request_timestamp,
+      NULL::BIGINT AS raw_request_id_internal, NULL::VARCHAR AS raw_request_content_categories,
+      NULL::VARCHAR AS raw_request_traffic_type, NULL::VARCHAR AS raw_request_app_id,
+      NULL::BIGINT AS raw_request_postal_code, NULL::DOUBLE AS raw_request_lat, NULL::DOUBLE AS raw_request_lon,
+      NULL::BIGINT AS raw_request_browser_version, NULL::VARCHAR AS raw_request_carrier,
+      NULL::VARCHAR AS raw_request_model, NULL::VARCHAR AS raw_request_user_internal_id,
+      NULL::VARCHAR AS raw_request_ifa, NULL::VARCHAR AS raw_request_auction_type,
+      NULL::VARCHAR AS raw_request_currency, NULL::BIGINT AS raw_request_secure, NULL::VARCHAR AS raw_request_tag_id,
+      NULL::VARCHAR AS raw_request_impression_type, NULL::VARCHAR AS raw_bid_id,
+      NULL::DOUBLE AS raw_bid_network_win_price, NULL::VARCHAR AS raw_bid_keyword, NULL::VARCHAR AS raw_bid_match_type,
+      NULL::VARCHAR AS event_status, NULL::VARCHAR AS raw_win_time, NULL::VARCHAR AS raw_win_datetime,
+      NULL::VARCHAR AS raw_status, NULL::VARCHAR AS raw_event_device_info_os_family,
+      NULL::VARCHAR AS raw_event_device_info_os, NULL::VARCHAR AS raw_event_device_info_browser_type,
+      NULL::BIGINT AS raw_event_device_info_browser_major_version, NULL::VARCHAR AS raw_http_event_info_referrer,
+      NULL::VARCHAR AS raw_request_date, NULL::VARCHAR AS raw_request_time, NULL::VARCHAR AS raw_request_datetime,
+      NULL::VARCHAR AS raw_request_request_id_string, NULL::VARCHAR AS raw_request_ssp,
+      NULL::VARCHAR AS raw_request_site_publisher_id, NULL::VARCHAR AS raw_request_site_publisher_name,
+      NULL::VARCHAR AS raw_request_site_name, NULL::VARCHAR AS raw_request_site_content_categories,
+      NULL::VARCHAR AS raw_request_app_publisher_id, NULL::VARCHAR AS raw_request_app_publisher_name,
+      NULL::VARCHAR AS raw_request_app_store_url, NULL::VARCHAR AS raw_request_app_content_categories,
+      NULL::BIGINT AS raw_request_device_geo_location_postal_code,
+      NULL::DOUBLE AS raw_request_device_geo_location_latitude,
+      NULL::DOUBLE AS raw_request_device_geo_location_longitude,
+      NULL::VARCHAR AS raw_request_device_info_os_family,
+      NULL::BIGINT AS raw_request_device_info_browser_major_version, NULL::VARCHAR AS raw_request_device_model,
+      NULL::VARCHAR AS raw_request_device_carrier, NULL::BOOLEAN AS raw_request_device_dnt,
+      NULL::VARCHAR AS raw_request_response_currency, NULL::BIGINT AS raw_impression_index,
+      NULL::VARCHAR AS raw_impression_tag_id, NULL::DOUBLE AS raw_impression_bidfloor,
+      NULL::BOOLEAN AS raw_impression_secure, NULL::VARCHAR AS raw_impression_type,
+      NULL::VARCHAR AS raw_impression_banner, NULL::VARCHAR AS raw_impression_video,
+      NULL::VARCHAR AS raw_impression_viewability, NULL::BIGINT AS raw_bid_index,
+      NULL::VARCHAR AS raw_bid_campaign_group, NULL::VARCHAR AS raw_bid_creative_type,
+      NULL::DOUBLE AS raw_bid_advertiser_price, NULL::DOUBLE AS raw_bid_network_price, NULL::DOUBLE AS raw_bid_price,
+      NULL::VARCHAR AS raw_bid_network_price_type, NULL::DOUBLE AS raw_bid_advertiser_win_price,
+      NULL::VARCHAR AS raw_bid_optimization_type, NULL::VARCHAR AS raw_bid_bid_match_type,
+      NULL::VARCHAR AS raw_bid_pretargeting_id, NULL::VARCHAR AS advertiser_id, NULL::VARCHAR AS agency_id,
+      NULL::DATE AS date
+    WHERE false
   )
+  SELECT * FROM schema
+  UNION ALL BY NAME
+  SELECT * FROM read_parquet('{{ .partition.uri }}/*.parquet', hive_partitioning = true, union_by_name = true)
