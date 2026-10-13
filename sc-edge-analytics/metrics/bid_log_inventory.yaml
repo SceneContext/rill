@@ -1,0 +1,55 @@
+type: metrics_view
+display_name: Bid Log Inventory Estimation
+description: >
+  Estimated ad inventory (enriched bid/request opportunities) by segment,
+  app, and time, derived from the sc-analytics bid log bucket.
+model: bid_log_events
+timeseries: event_time
+smallest_time_grain: hour
+
+dimensions:
+  - name: segment
+    display_name: Segment
+    column: segment
+    description: Context/audience segment code (e.g. SC_GENRE_THR_001)
+
+  - name: app_bundle
+    display_name: App (Bundle ID)
+    column: app_bundle
+
+  - name: partner
+    display_name: Partner
+    column: partner
+
+  - name: source
+    display_name: Enrichment Source
+    column: source
+    description: "cache = previously classified, live = freshly classified"
+
+  - name: node
+    display_name: Edge Node
+    column: node
+
+  # NOTE:no country dimension yet — the sample payload does not include one.
+  # Add it here once we confirm the field name in production logs (see README).
+
+measures:
+  - name: inventory_opportunities
+    display_name: Inventory Opportunities
+    expression: COUNT(*)
+    description: >
+      Number of enriched ad requests tagged with the selected segment(s) —
+      used as the proxy for available impression inventory.
+
+  - name: distinct_apps
+    display_name: Distinct Apps
+    expression: COUNT(DISTINCT app_bundle)
+
+  - name: distinct_content
+    display_name: Distinct Content IDs
+    expression: COUNT(DISTINCT content_id)
+
+  - name: live_classification_ratio
+    display_name: Live Classification Ratio
+    expression: AVG(CASE WHEN source = 'live' THEN 1.0 ELSE 0.0 END)
+    description: Share of opportunities that required fresh (non-cached) classification

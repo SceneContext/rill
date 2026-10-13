@@ -1,0 +1,24 @@
+# Model YAML
+# Reference documentation: https://docs.rilldata.com/developers/build/connectors/data-source/s3
+
+type: model
+materialize: true
+
+# Use DuckDB as the execution engine and read directly from S3 via read_parquet.
+connector: duckdb
+
+# Mount S3 credentials as DuckDB secrets for read_parquet
+create_secrets_from_connectors: [s3_3]
+
+sql: |
+  select
+    *,
+    filename
+  from read_parquet(
+    's3://scenecontext-dsp-log-bucket/agency_id=*/advertiser_id=*/campaign_id=*/processed/**/*.parquet',
+    filename=true,
+    union_by_name=true
+  )
+
+output:
+  connector: duckdb

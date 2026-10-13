@@ -1,0 +1,398 @@
+# Metrics view YAML
+# Reference documentation: https://docs.rilldata.com/reference/project-files/metrics-views
+# This file was generated using AI.
+
+version: 1
+type: metrics_view 
+
+display_name: SceneContext DSP Log Bucket
+connector: duckdb
+model: scenecontext_dsp_log_bucket
+timeseries: event_timestamp
+
+dimensions:
+  - name: event_timestamp
+    display_name: Event Timestamp
+    column: event_timestamp
+  - name: event_date
+    display_name: Event Date
+    column: event_date
+  - name: event_time_utc
+    display_name: Event Time Utc
+    column: event_time_utc
+  - name: customer_id
+    display_name: Customer Id
+    column: customer_id
+  - name: adgroup_id
+    display_name: Adgroup Id
+    column: adgroup_id
+  - name: creative_id
+    display_name: Creative Id
+    column: creative_id
+  - name: content_id
+    display_name: Content Id
+    column: content_id
+  - name: content_title
+    display_name: Content Title
+    column: content_title
+  - name: content_series
+    display_name: Content Series
+    column: content_series
+  - name: content_season
+    display_name: Content Season
+    column: content_season
+  - name: content_episode
+    display_name: Content Episode
+    column: content_episode
+  - name: content_genre
+    display_name: Content Genre
+    column: content_genre
+  - name: content_genre_1
+    display_name: Content Genre 1
+    column: content_genre_1
+  - name: content_genre_2
+    display_name: Content Genre 2
+    column: content_genre_2
+  - name: content_genre_3
+    display_name: Content Genre 3
+    column: content_genre_3
+  - name: content_genre_4
+    display_name: Content Genre 4
+    column: content_genre_4
+  - name: content_genre_5
+    display_name: Content Genre 5
+    column: content_genre_5
+  - name: content_rating
+    display_name: Content Rating
+    column: content_rating
+  - name: content_language
+    display_name: Content Language
+    column: content_language
+  - name: content_network
+    display_name: Content Network
+    column: content_network
+  - name: content_keywords
+    display_name: Content Keywords
+    column: content_keywords
+  - name: is_live_stream
+    display_name: Is Live Stream
+    column: is_live_stream
+  - name: streaming_network
+    display_name: Streaming Network
+    column: streaming_network
+  - name: streaming_channel
+    display_name: Streaming Channel
+    column: streaming_channel
+  - name: audio_feed_id
+    display_name: Audio Feed Id
+    column: audio_feed_id
+  - name: site_id
+    display_name: Site Id
+    column: site_id
+  - name: url
+    display_name: Url
+    column: url
+  - name: domain
+    display_name: Domain
+    column: domain
+  - name: app_bundle
+    display_name: App Bundle
+    column: app_bundle
+  - name: app_name
+    display_name: App Name
+    column: app_name
+  - name: app_domain
+    display_name: App Domain
+    column: app_domain
+  - name: app_publisher_id
+    display_name: App Publisher Id
+    column: app_publisher_id
+  - name: device_type
+    display_name: Device Type
+    column: device_type
+  - name: device_make
+    display_name: Device Make
+    column: device_make
+  - name: device_connection_type
+    display_name: Device Connection Type
+    column: device_connection_type
+  - name: os
+    display_name: Os
+    column: os
+  - name: browser
+    display_name: Browser
+    column: browser
+  - name: country
+    display_name: Country
+    column: country
+  - name: region
+    display_name: Region
+    column: region
+  - name: city
+    display_name: City
+    column: city
+  - name: language
+    display_name: Language
+    column: language
+  - name: exchange
+    display_name: Exchange
+    column: exchange
+  - name: publisher_id
+    display_name: Publisher Id
+    column: publisher_id
+  - name: impression_id
+    display_name: Impression Id
+    column: impression_id
+  - name: campaign_name
+    display_name: Campaign Name
+    column: campaign_name
+  - name: partner_id
+    display_name: Partner Id
+    column: partner_id
+  - name: source
+    display_name: Source
+    column: source
+  - name: ingestion_time
+    display_name: Ingestion Time
+    column: ingestion_time
+  - name: file_name
+    display_name: File Name
+    column: file_name
+  - name: raw_event_status
+    display_name: Raw Event Status
+    column: raw_event_status
+  - name: raw_event_country
+    display_name: Raw Event Country
+    column: raw_event_country
+  - name: raw_event_ip_address
+    display_name: Raw Event Ip Address
+    column: raw_event_ip_address
+  - name: raw_event_referrer
+    display_name: Raw Event Referrer
+    column: raw_event_referrer
+  - name: raw_request_timestamp
+    display_name: Raw Request Timestamp
+    column: raw_request_timestamp
+  - name: raw_request_content_categories
+    display_name: Raw Request Content Categories
+    column: raw_request_content_categories
+  - name: raw_request_traffic_type
+    display_name: Raw Request Traffic Type
+    column: raw_request_traffic_type
+  - name: raw_request_app_id
+    display_name: Raw Request App Id
+    column: raw_request_app_id
+  - name: raw_request_carrier
+    display_name: Raw Request Carrier
+    column: raw_request_carrier
+  - name: raw_request_model
+    display_name: Raw Request Model
+    column: raw_request_model
+  - name: raw_request_user_internal_id
+    display_name: Raw Request User Internal Id
+    column: raw_request_user_internal_id
+  - name: raw_request_ifa
+    display_name: Raw Request Ifa
+    column: raw_request_ifa
+  - name: raw_request_auction_type
+    display_name: Raw Request Auction Type
+    column: raw_request_auction_type
+  - name: raw_request_currency
+    display_name: Raw Request Currency
+    column: raw_request_currency
+  - name: raw_request_tag_id
+    display_name: Raw Request Tag Id
+    column: raw_request_tag_id
+  - name: raw_request_impression_type
+    display_name: Raw Request Impression Type
+    column: raw_request_impression_type
+  - name: raw_bid_id
+    display_name: Raw Bid Id
+    column: raw_bid_id
+  - name: raw_bid_keyword
+    display_name: Raw Bid Keyword
+    column: raw_bid_keyword
+  - name: raw_bid_match_type
+    display_name: Raw Bid Match Type
+    column: raw_bid_match_type
+  - name: event_status
+    display_name: Event Status
+    column: event_status
+  - name: raw_win_time
+    display_name: Raw Win Time
+    column: raw_win_time
+  - name: raw_win_datetime
+    display_name: Raw Win Datetime
+    column: raw_win_datetime
+  - name: raw_status
+    display_name: Raw Status
+    column: raw_status
+  - name: raw_event_device_info_os_family
+    display_name: Raw Event Device Info Os Family
+    column: raw_event_device_info_os_family
+  - name: raw_event_device_info_os
+    display_name: Raw Event Device Info Os
+    column: raw_event_device_info_os
+  - name: raw_event_device_info_browser_type
+    display_name: Raw Event Device Info Browser Type
+    column: raw_event_device_info_browser_type
+  - name: raw_http_event_info_referrer
+    display_name: Raw Http Event Info Referrer
+    column: raw_http_event_info_referrer
+  - name: raw_request_date
+    display_name: Raw Request Date
+    column: raw_request_date
+  - name: raw_request_time
+    display_name: Raw Request Time
+    column: raw_request_time
+  - name: raw_request_datetime
+    display_name: Raw Request Datetime
+    column: raw_request_datetime
+  - name: raw_request_request_id_string
+    display_name: Raw Request Request Id String
+    column: raw_request_request_id_string
+  - name: raw_request_ssp
+    display_name: Raw Request Ssp
+    column: raw_request_ssp
+  - name: raw_request_site_publisher_id
+    display_name: Raw Request Site Publisher Id
+    column: raw_request_site_publisher_id
+  - name: raw_request_site_publisher_name
+    display_name: Raw Request Site Publisher Name
+    column: raw_request_site_publisher_name
+  - name: raw_request_site_name
+    display_name: Raw Request Site Name
+    column: raw_request_site_name
+  - name: raw_request_site_content_categories
+    display_name: Raw Request Site Content Categories
+    column: raw_request_site_content_categories
+  - name: raw_request_app_publisher_id
+    display_name: Raw Request App Publisher Id
+    column: raw_request_app_publisher_id
+  - name: raw_request_app_publisher_name
+    display_name: Raw Request App Publisher Name
+    column: raw_request_app_publisher_name
+  - name: raw_request_app_store_url
+    display_name: Raw Request App Store Url
+    column: raw_request_app_store_url
+  - name: raw_request_app_content_categories
+    display_name: Raw Request App Content Categories
+    column: raw_request_app_content_categories
+  - name: raw_request_device_info_os_family
+    display_name: Raw Request Device Info Os Family
+    column: raw_request_device_info_os_family
+  - name: raw_request_device_model
+    display_name: Raw Request Device Model
+    column: raw_request_device_model
+  - name: raw_request_device_carrier
+    display_name: Raw Request Device Carrier
+    column: raw_request_device_carrier
+  - name: raw_request_device_dnt
+    display_name: Raw Request Device Dnt
+    column: raw_request_device_dnt
+  - name: raw_request_response_currency
+    display_name: Raw Request Response Currency
+    column: raw_request_response_currency
+  - name: raw_impression_tag_id
+    display_name: Raw Impression Tag Id
+    column: raw_impression_tag_id
+  - name: raw_impression_secure
+    display_name: Raw Impression Secure
+    column: raw_impression_secure
+  - name: raw_impression_type
+    display_name: Raw Impression Type
+    column: raw_impression_type
+  - name: raw_impression_banner
+    display_name: Raw Impression Banner
+    column: raw_impression_banner
+  - name: raw_impression_video
+    display_name: Raw Impression Video
+    column: raw_impression_video
+  - name: raw_bid_campaign_group
+    display_name: Raw Bid Campaign Group
+    column: raw_bid_campaign_group
+  - name: raw_bid_creative_type
+    display_name: Raw Bid Creative Type
+    column: raw_bid_creative_type
+  - name: raw_bid_network_price_type
+    display_name: Raw Bid Network Price Type
+    column: raw_bid_network_price_type
+  - name: raw_bid_optimization_type
+    display_name: Raw Bid Optimization Type
+    column: raw_bid_optimization_type
+  - name: raw_bid_bid_match_type
+    display_name: Raw Bid Bid Match Type
+    column: raw_bid_bid_match_type
+  - name: raw_bid_pretargeting_id
+    display_name: Raw Bid Pretargeting Id
+    column: raw_bid_pretargeting_id
+  - name: filename
+    display_name: Filename
+    column: filename
+  - name: advertiser_id
+    display_name: Advertiser Id
+    column: advertiser_id
+  - name: agency_id
+    display_name: Agency Id
+    column: agency_id
+  - name: date
+    display_name: Date
+    column: date
+  - name: filename_1
+    display_name: Filename 1
+    column: filename_1
+
+measures:
+  - name: total_events_measure
+    display_name: Total Events
+    expression: COUNT(*)
+    description: Total number of log records (events).
+    format_preset: humanize
+  - name: total_impressions_measure
+    display_name: Total Impressions
+    expression: SUM(impressions)
+    description: Total number of impressions.
+    format_preset: humanize
+  - name: total_clicks_measure
+    display_name: Total Clicks
+    expression: SUM(clicks)
+    description: Total number of clicks.
+    format_preset: humanize
+  - name: total_conversions_measure
+    display_name: Total Conversions
+    expression: SUM(conversions)
+    description: Total number of conversions.
+    format_preset: humanize
+  - name: total_revenue_measure
+    display_name: Total Revenue
+    expression: SUM(revenue)
+    description: Total revenue across all events.
+    format_preset: humanize
+  - name: total_cost_measure
+    display_name: Total Cost
+    expression: SUM(cost)
+    description: Total advertising cost across all events.
+    format_preset: humanize
+  - name: average_revenue_per_event_measure
+    display_name: Average Revenue per Event
+    expression: AVG(revenue)
+    description: Average revenue per log record.
+    format_preset: humanize
+  - name: average_cost_per_event_measure
+    display_name: Average Cost per Event
+    expression: AVG(cost)
+    description: Average cost per log record.
+    format_preset: humanize
+  - name: max_raw_bid_price_measure
+    display_name: Max Raw Bid Price
+    expression: MAX(raw_bid_price)
+    description: Highest observed raw bid price.
+    format_preset: humanize
+  - name: average_viewability_measure
+    display_name: Average Viewability
+    expression: AVG(raw_impression_viewability)
+    description: Average reported impression viewability.
+    format_preset: humanize
+
+explore:
+  display_name: SceneContext DSP Log Bucket dashboard

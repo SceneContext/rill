@@ -1,0 +1,46 @@
+type: model
+connector: duckdb
+
+# Incremental + partitioned ingestion: the bucket grows continuously, so we
+# never want to re-list/re-read the whole history on every refresh. Each
+# dt=/hour=/node= directory becomes one partition; only new/changed
+# partitions are (re)ingested on each run.
+incremental: true
+refresh:
+  cron: "0 * * * *" # hourly; tighten/loosen to match how often the bidders flush logs
+
+partitions:
+  glob:
+    connector: s3_sc_analytics
+    path: s3://sc-analytics-445214595912/events/dt=*/hour=*/node=ovh-sc-edge-*/*.log.gz
+    partition: hive
+
+create_secrets_from_connectors: s3_sc_analytics
+
+# Grain of this table is one row per (enrichment event, segment) pair, because
+# `segments` is unnested. This is intentional: for inventory estimation,
+# COUNT(*) filtered/grouped by `segment` directly gives "opportunities tagged
+# with segment X", which is what the metrics view below uses.
+sql: |
+  SELECT
+    bundle                       AS app_bundle,
+    partner,
+    endpoint,
+    source,                      -- 'cache' or 'live' classification
+    scid                         AS content_id,
+    title                        AS content_title,
+    node,
+    latency_us,
+    dt::DATE                     AS event_date,
+    hour::INT                    AS event_hour,
+    epoch_ms(timestamp)          AS event_time,   -- `timestamp` field is epoch millis
+    ts::TIMESTAMP                AS enrich_time,
+    unnest(segments)             AS segment,
+    '{{ .partition.dt }}'        AS partition_dt,
+    '{{ .partition.hour }}'      AS partition_hour,
+    '{{ .partition.node }}'      AS partition_node
+  FROM read_ndjson_auto('{{ .partition.uri }}/*.log.gz')
+
+output:
+  connector: duckdb
+  incremental_strategy: append
