@@ -11,11 +11,12 @@ refresh:
 
 partitions:
   glob:
-    connector: s3_sc_analytics
+    connector: s3
     path: s3://sc-analytics-445214595912/events/dt=*/hour=*/node=ovh-sc-edge-*/*.log.gz
     partition: hive
+    last: 48
 
-create_secrets_from_connectors: s3_sc_analytics
+create_secrets_from_connectors: s3
 
 # Grain of this table is one row per (enrichment event, segment) pair, because
 # `segments` is unnested. This is intentional: for inventory estimation,
@@ -39,8 +40,16 @@ sql: |
     '{{ .partition.dt }}'        AS partition_dt,
     '{{ .partition.hour }}'      AS partition_hour,
     '{{ .partition.node }}'      AS partition_node
-  FROM read_ndjson_auto('{{ .partition.uri }}/*.log.gz')
+  FROM read_json('{{ .partition.uri }}/*.log.gz',
+    format = 'newline_delimited',
+    compression = 'gzip',
+    hive_partitioning = true,
+    ignore_errors = true,
+    columns = {
+      bundle: 'VARCHAR', partner: 'VARCHAR', endpoint: 'VARCHAR', source: 'VARCHAR',
+      scid: 'VARCHAR', title: 'VARCHAR', latency_us: 'BIGINT', "timestamp": 'BIGINT',
+      ts: 'VARCHAR', segments: 'VARCHAR[]'
+    })
 
 output:
   connector: duckdb
-  incremental_strategy: append

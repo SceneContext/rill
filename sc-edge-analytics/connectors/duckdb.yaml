@@ -1,0 +1,7 @@
+type: connector
+driver: duckdb
+memory_limit_gb: 2
+cpu: 2
+read_write_ratio: 0.25   # 0.5 GB for dashboard queries, 1.5 GB for ingestion
+init_sql: |
+  SET preserve_insertion_order = false;
