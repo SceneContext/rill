@@ -3,10 +3,11 @@
 type: model
 materialize: true
 
-connector: s3
-path: "s3://scenecontext-dsp-log-bucket/agency_id=*/advertiser_id=*/campaign_id=*/processed/**/*.parquet"
-aws_region: "eu-central-1"
-
-# If using env vars for AWS credentials, ensure these match:
-aws_access_key_id: "{{ .env.AWS_ACCESS_KEY_ID }}"
-aws_secret_access_key: "{{ .env.AWS_SECRET_ACCESS_KEY }}"
+create_secrets_from_connectors: s3_dsp
+sql: >
+  SELECT *
+  FROM read_parquet(
+    's3://scenecontext-dsp-log-bucket/agency_id=*/advertiser_id=*/campaign_id=*/processed/**/*.parquet',
+    hive_partitioning = true,
+    union_by_name = true
+  )
