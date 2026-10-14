@@ -7,7 +7,7 @@ type: metrics_view
 
 display_name: Scenecontext DSP Log Bucket — Suggested Metrics
 connector: duckdb
-model: scenecontext_dsp_log_bucket
+model: AdKernel
 timeseries: event_timestamp
 
 dimensions:
@@ -326,9 +326,6 @@ dimensions:
   - name: raw_bid_pretargeting_id
     display_name: Raw Bid Pretargeting Id
     column: raw_bid_pretargeting_id
-  - name: filename
-    display_name: Filename
-    column: filename
   - name: advertiser_id
     display_name: Advertiser Id
     column: advertiser_id
@@ -338,9 +335,6 @@ dimensions:
   - name: date
     display_name: Date
     column: date
-  - name: filename_1
-    display_name: Filename 1
-    column: filename_1
 
 measures:
   - name: total_rows_measure_measure
