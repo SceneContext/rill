@@ -18,38 +18,46 @@ partitions:
 
 create_secrets_from_connectors: s3
 
-# Grain of this table is one row per (enrichment event, segment) pair, because
-# `segments` is unnested. This is intentional: for inventory estimation,
-# COUNT(*) filtered/grouped by `segment` directly gives "opportunities tagged
-# with segment X", which is what the metrics view below uses.
+# Grain of this table is one row per (hour, node, partner, endpoint, source,
+# app_bundle, segment), with `segments` deduplicated and unnested per event.
 sql: |
+  WITH raw AS (
+    SELECT
+      bundle,
+      partner,
+      endpoint,
+      source,
+      scid,
+      unnest(list_distinct(segments)) AS segment
+    FROM read_json('{{ .partition.uri }}/*.log.gz',
+      format = 'newline_delimited',
+      compression = 'gzip',
+      hive_partitioning = false,
+      ignore_errors = true,
+      columns = {
+        bundle: 'VARCHAR', partner: 'VARCHAR', endpoint: 'VARCHAR', source: 'VARCHAR',
+        scid: 'VARCHAR', segments: 'VARCHAR[]'
+      })
+    WHERE len(segments) > 0
+  )
   SELECT
-    bundle                       AS app_bundle,
-    partner,
-    endpoint,
-    source,                      -- 'cache' or 'live' classification
-    scid                         AS content_id,
-    title                        AS content_title,
-    node,
-    latency_us,
-    dt::DATE                     AS event_date,
-    hour::INT                    AS event_hour,
-    epoch_ms(timestamp)          AS event_time,   -- `timestamp` field is epoch millis
-    ts::TIMESTAMP                AS enrich_time,
-    unnest(segments)             AS segment,
-    '{{ .partition.dt }}'        AS partition_dt,
-    '{{ .partition.hour }}'      AS partition_hour,
-    '{{ .partition.node }}'      AS partition_node
-  FROM read_json('{{ .partition.uri }}/*.log.gz',
-    format = 'newline_delimited',
-    compression = 'gzip',
-    hive_partitioning = true,
-    ignore_errors = true,
-    columns = {
-      bundle: 'VARCHAR', partner: 'VARCHAR', endpoint: 'VARCHAR', source: 'VARCHAR',
-      scid: 'VARCHAR', title: 'VARCHAR', latency_us: 'BIGINT', "timestamp": 'BIGINT',
-      ts: 'VARCHAR', segments: 'VARCHAR[]'
-    })
+    strptime('{{ .partition.dt }} {{ .partition.hour }}', '%Y-%m-%d %H') AS event_time,
+    '{{ .partition.dt }}'::DATE                                          AS event_date,
+    '{{ .partition.hour }}'::INT                                         AS event_hour,
+    '{{ .partition.node }}'                                              AS node,
+    coalesce(partner, 'unknown')                                         AS partner,
+    coalesce(endpoint, 'unknown')                                        AS endpoint,
+    coalesce(source, 'unknown')                                          AS source,
+    bundle                                                               AS app_bundle,
+    segment,
+    count(*)                                                             AS opportunities,
+    count(DISTINCT nullif(scid, ''))                                     AS distinct_content_ids,
+    '{{ .partition.dt }}'                                                AS partition_dt,
+    '{{ .partition.hour }}'                                              AS partition_hour,
+    '{{ .partition.node }}'                                              AS partition_node
+  FROM raw
+  WHERE segment IS NOT NULL AND segment <> ''
+  GROUP BY ALL
 
 output:
   connector: duckdb

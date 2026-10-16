@@ -24,7 +24,7 @@ dimensions:
   - name: source
     display_name: Enrichment Source
     column: source
-    description: "cache = previously classified, live = freshly classified"
+    description: "cache = previously classified, resolved = freshly classified"
 
   - name: node
     display_name: Edge Node
@@ -36,7 +36,7 @@ dimensions:
 measures:
   - name: inventory_opportunities
     display_name: Inventory Opportunities
-    expression: COUNT(*)
+    expression: SUM(opportunities)
     description: >
       Number of enriched ad requests tagged with the selected segment(s) —
       used as the proxy for available impression inventory.
@@ -47,9 +47,9 @@ measures:
 
   - name: distinct_content
     display_name: Distinct Content IDs
-    expression: COUNT(DISTINCT content_id)
+    expression: SUM(distinct_content_ids)
 
   - name: live_classification_ratio
     display_name: Live Classification Ratio
-    expression: AVG(CASE WHEN source = 'live' THEN 1.0 ELSE 0.0 END)
+    expression: coalesce(SUM(opportunities) FILTER (WHERE source <> 'cache'), 0) * 1.0 / NULLIF(SUM(opportunities), 0)
     description: Share of opportunities that required fresh (non-cached) classification
