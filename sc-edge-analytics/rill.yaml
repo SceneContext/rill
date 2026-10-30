@@ -7,3 +7,9 @@ olap_connector: duckdb
 
 ignore_paths:
   - /scripts
+
+# Default keeps the template valid when APP_CATALOG_KEY is not yet set locally.
+# The real key must be present in .env (or passed via --env) before running
+# `rill project refresh --model app_catalog`.
+env:
+  APP_CATALOG_KEY: ""

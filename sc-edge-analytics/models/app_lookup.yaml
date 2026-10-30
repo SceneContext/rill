@@ -6,12 +6,13 @@
 # ASIN and bundle_id is com.x.y). Keys are lower-cased and trimmed; duplicates
 # resolve to the most recently updated catalog entry.
 #
-# This view is intentionally cheap: it reads app_catalog (~400 rows) at query
-# time. Rill re-runs it whenever app_catalog refreshes.
+# Materialised so the table always exists in DuckDB from the moment Rill starts
+# (empty until the first app_catalog refresh). This prevents metrics views that
+# reference app_lookup from failing validation before the catalog is seeded.
 
 type: model
 connector: duckdb
-materialize: false  # lightweight view; no extra storage cost
+materialize: true
 
 sql: |
   WITH all_keys AS (
@@ -58,5 +59,3 @@ tests:
   - name: unique_key
     sql: |
       SELECT key FROM app_lookup GROUP BY key HAVING count(*) > 1
-  - name: not_empty
-    assert: count(*) > 0

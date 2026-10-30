@@ -21,12 +21,16 @@ refresh:
   time_zone: UTC
 
 pre_exec: |
+  {{ if .env.APP_CATALOG_KEY -}}
   CREATE OR REPLACE SECRET app_catalog_api (
     TYPE http,
     EXTRA_HTTP_HEADERS MAP {
       'X-App-Catalog-Key': '{{ .env.APP_CATALOG_KEY }}'
     }
   )
+  {{- else -}}
+  SELECT 1
+  {{- end }}
 
 sql: |
   WITH pages AS (
