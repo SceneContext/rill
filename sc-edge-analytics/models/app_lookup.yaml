@@ -1,0 +1,62 @@
+# One-row-per-key lookup table: lowercased app key → canonical app name.
+#
+# The catalog has three candidate keys per entry: catalog_id, platform_app_id,
+# and bundle_id. For matching against bid-log bundle strings we emit all three
+# (they overlap for most platforms, but differ on Fire TV where catalog_id is an
+# ASIN and bundle_id is com.x.y). Keys are lower-cased and trimmed; duplicates
+# resolve to the most recently updated catalog entry.
+#
+# This view is intentionally cheap: it reads app_catalog (~400 rows) at query
+# time. Rill re-runs it whenever app_catalog refreshes.
+
+type: model
+connector: duckdb
+materialize: false  # lightweight view; no extra storage cost
+
+sql: |
+  WITH all_keys AS (
+    -- catalog_id key (ASIN, numeric ID, or bundle depending on platform)
+    SELECT lower(trim(catalog_id)) AS key, app_name, platform, publisher, updated_at
+    FROM app_catalog
+    WHERE catalog_id IS NOT NULL AND trim(catalog_id) <> ''
+
+    UNION ALL
+
+    -- platform_app_id key (may differ from catalog_id on Fire TV)
+    SELECT lower(trim(platform_app_id)) AS key, app_name, platform, publisher, updated_at
+    FROM app_catalog
+    WHERE platform_app_id IS NOT NULL AND trim(platform_app_id) <> ''
+      AND lower(trim(platform_app_id)) <> lower(trim(catalog_id))
+
+    UNION ALL
+
+    -- bundle_id key (reverse-domain for Android/Apple; same as catalog_id on most other platforms)
+    SELECT lower(trim(bundle_id)) AS key, app_name, platform, publisher, updated_at
+    FROM app_catalog
+    WHERE bundle_id IS NOT NULL AND trim(bundle_id) <> ''
+      AND lower(trim(bundle_id)) <> lower(trim(catalog_id))
+      AND lower(trim(bundle_id)) <> lower(trim(platform_app_id))
+  ),
+  ranked AS (
+    SELECT
+      key,
+      app_name,
+      platform,
+      publisher,
+      updated_at,
+      row_number() OVER (PARTITION BY key ORDER BY updated_at DESC) AS rn
+    FROM all_keys
+  )
+  SELECT key, app_name, platform, publisher
+  FROM ranked
+  WHERE rn = 1
+
+output:
+  connector: duckdb
+
+tests:
+  - name: unique_key
+    sql: |
+      SELECT key FROM app_lookup GROUP BY key HAVING count(*) > 1
+  - name: not_empty
+    assert: count(*) > 0

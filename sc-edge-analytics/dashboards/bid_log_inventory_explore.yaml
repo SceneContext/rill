@@ -1,0 +1,24 @@
+# Explore YAML
+# Reference documentation: https://docs.rilldata.com/reference/project-files/explores
+
+type: explore
+
+display_name: Bid Log Inventory
+metrics_view: bid_log_inventory
+
+dimensions: '*'
+measures: '*'
+
+time_zones:
+  - UTC
+
+defaults:
+  measures:
+    - inventory_opportunities
+    - distinct_apps
+  dimensions:
+    - app_name
+    - app_platform
+    - segment
+    - partner
+  time_range: P7D

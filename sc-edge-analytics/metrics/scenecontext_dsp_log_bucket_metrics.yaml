@@ -98,8 +98,37 @@ dimensions:
   - name: app_bundle
     display_name: App Bundle
     column: app_bundle
-  - name: app_name
+  - name: app_name_catalog
     display_name: App Name
+    description: >-
+      Resolved from the SceneContext app catalog using app_bundle then raw_request_app_id;
+      falls back to the DSP-supplied app_name, then the raw bundle ID.
+    expression: >-
+      coalesce(
+        (SELECT lk.app_name FROM app_lookup lk WHERE lk.key = lower(trim(app_bundle)) LIMIT 1),
+        (SELECT lk.app_name FROM app_lookup lk WHERE lk.key = lower(trim(raw_request_app_id)) LIMIT 1),
+        nullif(trim(app_name), ''),
+        app_bundle
+      )
+  - name: app_platform_catalog
+    display_name: App Platform
+    description: Platform from the app catalog (e.g. Android TV, Roku).
+    expression: >-
+      coalesce(
+        (SELECT lk.platform FROM app_lookup lk WHERE lk.key = lower(trim(app_bundle)) LIMIT 1),
+        (SELECT lk.platform FROM app_lookup lk WHERE lk.key = lower(trim(raw_request_app_id)) LIMIT 1)
+      )
+  - name: app_publisher_catalog
+    display_name: App Publisher
+    description: Publisher from the app catalog.
+    expression: >-
+      coalesce(
+        (SELECT lk.publisher FROM app_lookup lk WHERE lk.key = lower(trim(app_bundle)) LIMIT 1),
+        (SELECT lk.publisher FROM app_lookup lk WHERE lk.key = lower(trim(raw_request_app_id)) LIMIT 1)
+      )
+  - name: app_name
+    display_name: App Name (DSP)
+    description: App name as reported by AdKernel/DSP — may be blank or inaccurate.
     column: app_name
   - name: app_domain
     display_name: App Domain

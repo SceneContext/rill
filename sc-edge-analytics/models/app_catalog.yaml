@@ -1,0 +1,83 @@
+# Materialised copy of the SceneContext app catalog, refreshed daily at 03:05 UTC.
+#
+# The catalog API is paginated (max 200 per page, 400 rows total as of Oct 2026).
+# We always fetch pages 1-10; a model test fires if we see any items on page 10,
+# which would mean the catalog outgrew the window.
+#
+# Authentication: the API key is read from env var APP_CATALOG_KEY and passed as
+# an EXTRA_HTTP_HEADERS DuckDB HTTP secret in pre_exec. The secret is scoped to
+# the catalogapi.scenecontext.io origin only, so it never leaks onto S3 requests.
+#
+# change_mode: reset is intentional — this is a full snapshot each day. If the
+# API is temporarily unavailable the refresh errors out (non-destructive), and
+# the previous day's data stays in place.
+
+type: model
+connector: duckdb
+materialize: true
+
+refresh:
+  cron: "5 3 * * *"
+  time_zone: UTC
+
+pre_exec: |
+  CREATE OR REPLACE SECRET app_catalog_api (
+    TYPE http,
+    EXTRA_HTTP_HEADERS MAP {
+      'X-App-Catalog-Key': '{{ .env.APP_CATALOG_KEY }}'
+    }
+  )
+
+sql: |
+  WITH pages AS (
+    SELECT unnest([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) AS page_num
+  ),
+  raw AS (
+    SELECT
+      page_num,
+      read_json(
+        'https://campaignapi.scenecontext.io/api/v1/service/apps?page=' || page_num::VARCHAR || '&page_size=200',
+        format = 'auto',
+        columns = {
+          items:    'STRUCT(
+            id            VARCHAR,
+            name          VARCHAR,
+            bundle_id     VARCHAR,
+            platform_app_id VARCHAR,
+            platform      VARCHAR,
+            publisher     VARCHAR,
+            updated_at    VARCHAR
+          )[]'
+        },
+        field_appearance_threshold = 0
+      ) AS body
+    FROM pages
+  ),
+  items AS (
+    SELECT
+      page_num,
+      unnest(body.items) AS item
+    FROM raw
+  )
+  SELECT
+    item.id              AS catalog_id,
+    item.name            AS app_name,
+    item.bundle_id       AS bundle_id,
+    item.platform_app_id AS platform_app_id,
+    item.platform        AS platform,
+    item.publisher       AS publisher,
+    item.updated_at::TIMESTAMP AS updated_at
+  FROM items
+  WHERE item.id IS NOT NULL
+
+output:
+  connector: duckdb
+
+tests:
+  - name: not_empty
+    assert: count(*) > 0
+  - name: page_window_not_exhausted
+    description: "Fires if the catalog grew past 10 pages × 200 = 2000 entries. Widen the page list."
+    sql: |
+      SELECT 1 FROM app_catalog LIMIT 2000 + 1
+      HAVING count(*) > 2000

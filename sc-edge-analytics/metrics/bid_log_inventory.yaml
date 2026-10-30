@@ -17,6 +17,27 @@ dimensions:
     display_name: App (Bundle ID)
     column: app_bundle
 
+  - name: app_name
+    display_name: App Name
+    description: Resolved from the app catalog; falls back to the raw bundle ID when no match.
+    expression: >-
+      coalesce(
+        (SELECT app_name FROM app_lookup WHERE key = lower(trim(app_bundle)) LIMIT 1),
+        app_bundle
+      )
+
+  - name: app_platform
+    display_name: App Platform
+    description: Platform from the app catalog (e.g. Android TV, Roku).
+    expression: >-
+      (SELECT platform FROM app_lookup WHERE key = lower(trim(app_bundle)) LIMIT 1)
+
+  - name: app_publisher
+    display_name: App Publisher
+    description: Publisher from the app catalog.
+    expression: >-
+      (SELECT publisher FROM app_lookup WHERE key = lower(trim(app_bundle)) LIMIT 1)
+
   - name: partner
     display_name: Partner
     column: partner

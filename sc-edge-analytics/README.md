@@ -30,6 +30,45 @@ permanently losing older history. With `manual`:
   **drops any history older than 90 days**. Only do that deliberately.
 - After day 90, the Rill DuckDB files on the EC2 host are the only copy of older rollups. Back them up.
 
+## App catalog (app names in dashboards)
+
+Two new models resolve raw app IDs to human-readable names from the SceneContext app catalog API:
+
+| Model | Type | Refreshes |
+|---|---|---|
+| `app_catalog` | materialized table | daily 03:05 UTC |
+| `app_lookup` | view (on top of `app_catalog`) | on every query |
+
+The catalog (~377 apps, 7 platforms as of Oct 2026) is fetched in pages of 200 from
+`https://campaignapi.scenecontext.io/api/v1/service/apps`. Authentication uses the
+`APP_CATALOG_KEY` env var (set in `.env` locally and in the EC2 host environment).
+
+Each catalog entry has three candidate keys (`id`, `platform_app_id`, `bundle_id`).
+`app_lookup` emits one row per lowercased key pointing to the canonical name; ties resolve
+to the most recently updated entry.
+
+**First deploy:** `app_catalog` must be refreshed once manually before the dashboards can
+join against it:
+```
+rill project refresh --local --model app_catalog
+```
+
+**Match-rate check** (run after first refresh):
+```sql
+-- In the Rill DuckDB shell or scripts/
+SELECT
+  count(*) AS total,
+  count(DISTINCT app_bundle) AS distinct_bundles,
+  count(DISTINCT CASE WHEN lk.app_name IS NOT NULL THEN app_bundle END) AS matched_bundles,
+  round(100.0 * count(DISTINCT CASE WHEN lk.app_name IS NOT NULL THEN app_bundle END)
+        / nullif(count(DISTINCT app_bundle), 0), 1) AS match_pct
+FROM bid_log_events ble
+LEFT JOIN app_lookup lk ON lk.key = lower(trim(ble.app_bundle));
+```
+
+**Growing beyond 2 000 apps:** if the `page_window_not_exhausted` test fires, extend the
+`unnest([1, 2, ..., N])` list in `models/app_catalog.yaml`.
+
 ## Acceptance checks
 
 - Model `tests:` run automatically (non-null flags, latency buckets sum to requests, unique grain, etc.).
