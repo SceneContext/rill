@@ -21,6 +21,12 @@ refresh:
   cron: "5 3 * * *"
   time_zone: UTC
 
+# campaignapi.scenecontext.io returns 405 on HEAD requests; without force_download,
+# DuckDB < 1.5.6 falls back to a broken Range: bytes=0-1 probe and fails with
+# "HTTP 0 Internal Server Error" (duckdb/duckdb#21583, #24981).
+pre_exec: |
+  SET force_download = true
+
 sql: |
   -- read_json is a table function so each page needs its own FROM clause.
   -- The API returns a JSON object; we select the items array and unnest it.
@@ -82,9 +88,8 @@ output:
 
 tests:
   - name: not_empty
-    assert: count(*) > 0
-  - name: page_window_not_exhausted
-    description: "Fires if the catalog grew past 10 pages × 200 = 2000 entries. Widen the page list."
     sql: |
-      SELECT 1 FROM app_catalog LIMIT 2000 + 1
-      HAVING count(*) > 2000
+      SELECT 1 WHERE (SELECT count(*) FROM app_catalog) = 0
+  - name: page_window_not_exhausted
+    sql: |
+      SELECT count(*) AS n FROM app_catalog HAVING count(*) >= 2000
