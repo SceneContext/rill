@@ -1,0 +1,8 @@
+type: connector
+driver: https
+
+headers:
+  X-App-Catalog-Key: "{{ .env.APP_CATALOG_KEY }}"
+
+path_prefixes:
+  - https://campaignapi.scenecontext.io/

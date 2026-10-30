@@ -4,9 +4,9 @@
 # We always fetch pages 1-10; a model test fires if we see any items on page 10,
 # which would mean the catalog outgrew the window.
 #
-# Authentication: the API key is read from env var APP_CATALOG_KEY and passed as
-# an EXTRA_HTTP_HEADERS DuckDB HTTP secret in pre_exec. The secret is scoped to
-# the catalogapi.scenecontext.io origin only, so it never leaks onto S3 requests.
+# Authentication: connectors/app_catalog_api.yaml holds the X-App-Catalog-Key header.
+# Rill mounts it automatically as a DuckDB HTTP secret (EXTRA_HTTP_HEADERS) scoped to
+# campaignapi.scenecontext.io, so it never leaks onto S3 requests.
 #
 # change_mode: reset is intentional — this is a full snapshot each day. If the
 # API is temporarily unavailable the refresh errors out (non-destructive), and
@@ -15,22 +15,11 @@
 type: model
 connector: duckdb
 materialize: true
+create_secrets_from_connectors: app_catalog_api
 
 refresh:
   cron: "5 3 * * *"
   time_zone: UTC
-
-pre_exec: |
-  {{ if .env.APP_CATALOG_KEY -}}
-  CREATE OR REPLACE SECRET app_catalog_api (
-    TYPE http,
-    EXTRA_HTTP_HEADERS MAP {
-      'X-App-Catalog-Key': '{{ .env.APP_CATALOG_KEY }}'
-    }
-  )
-  {{- else -}}
-  SELECT 1
-  {{- end }}
 
 sql: |
   -- read_json is a table function so each page needs its own FROM clause.
